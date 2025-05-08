@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import Welcome from '@/components/Welcome.vue'
 import Chat from '@/components/Chat.vue'
 
@@ -12,7 +11,7 @@ const router = createRouter({
       component: Welcome,
     },
     {
-      path: '/chat/:name',
+      path: '/chat/:name/:roomId',
       name: 'Chat',
       component: Chat,
       props: true,
@@ -23,14 +22,6 @@ const router = createRouter({
           next({ name: 'home' })
         }
       },
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
     },
   ],
 })

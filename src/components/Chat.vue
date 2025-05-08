@@ -1,6 +1,9 @@
 <template>
   <div class="chat container">
-    <h2 class="center teal-text">Galal-chat</h2>
+    <button class="btn-floating btn-large waves-effect waves-light teal" @click="$router.push('/')">
+      <i class="material-icons">arrow_back</i>
+    </button>
+    <h2 class="center teal-text">Private Chat - Room: {{ roomId }}</h2>
     <div class="card">
       <div class="card-content" ref="chatContainer">
         <ul class="messages">
@@ -12,7 +15,7 @@
         </ul>
       </div>
       <div class="card-action">
-        <NewMessage :name="name" />
+        <NewMessage :name="name" :roomId="roomId" />
       </div>
     </div>
   </div>
@@ -25,7 +28,7 @@ import NewMessage from '@/components/NewMessage.vue'
 import moment from 'moment'
 export default {
   name: 'Chat',
-  props: ['name'],
+  props: ['name', 'roomId'],
   components: {
     NewMessage,
   },
@@ -36,28 +39,33 @@ export default {
   },
   methods: {
     fetchMessages() {
-      const ref = collection(db, 'messages')
-      const messagesQuery = query(ref, orderBy('timestamp')) // Add the 'orderBy' clause
+      // console.log('Room ID:', this.roomId) // Debugging: Check if roomId is correct
+      if (!this.roomId) {
+        // console.error('Room ID is undefined') // Debugging: Log error if roomId is missing
+        return
+      }
+      const ref = collection(db, `rooms/${this.roomId}/messages`)
+      const messagesQuery = query(ref, orderBy('timestamp'))
       onSnapshot(messagesQuery, (snapshot) => {
+        //console.log('Snapshot size:', snapshot.size) // Debugging: Check if messages exist
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added') {
             let doc = change.doc
+            // console.log('New message:', doc.data()) // Debugging: Log message data
             this.messages.push({
               id: doc.id,
               name: doc.data().name,
               content: doc.data().content,
-              timestamp: moment(doc.data().timestamp).format('lll'), // Format the timestamp using moment.js
+              timestamp: moment(doc.data().timestamp).format('lll'),
             })
-            this.scrollToBottom() // Scroll to the bottom when a new message is added
           }
         })
       })
     },
-    scrollToBottom(offset = 0) {
+    scrollToBottom() {
       const chatContainer = this.$refs.chatContainer
       if (chatContainer) {
-        // Scroll to a specific position: scrollHeight - offset
-        chatContainer.scrollTop = chatContainer.scrollHeight - offset
+        chatContainer.scrollTop = chatContainer.scrollHeight
       }
     },
   },
@@ -81,6 +89,9 @@ export default {
 .chat {
   font-size: 1.5em;
   margin-bottom: 40px;
+}
+.chat button {
+  margin-top: 20px;
 }
 .chat span {
   font-size: 1.4em;

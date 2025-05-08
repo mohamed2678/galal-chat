@@ -20,7 +20,7 @@ import { collection, addDoc } from 'firebase/firestore'
 
 export default {
   name: 'NewMessage',
-  props: ['name'],
+  props: ['name', 'roomId'],
   data() {
     return {
       newMessage: null,
@@ -31,8 +31,7 @@ export default {
     async addMessage() {
       if (this.newMessage) {
         try {
-          // Use the modular SDK's collection and addDoc functions
-          await addDoc(collection(db, 'messages'), {
+          await addDoc(collection(db, 'rooms', this.roomId, 'messages'), {
             content: this.newMessage,
             name: this.name,
             timestamp: Date.now(),
