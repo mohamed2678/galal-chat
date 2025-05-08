@@ -23,76 +23,69 @@
   </div>
 </template>
 
-<script>
-import { doc, getDoc } from 'firebase/firestore'
+<script lang="ts" setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { db } from '@/firebase/init'
-import { watch } from 'vue'
+import { doc, getDoc } from 'firebase/firestore'
 
-export default {
-  name: 'Welcome',
-  data() {
-    return {
-      name: null,
-      roomId: null,
-      password: null,
-      requiresPassword: false,
-      roomPassword: null,
-      feedback: null,
+const name = ref<string | null>(null)
+const roomId = ref<string | null>(null)
+const password = ref<string | null>(null)
+const requiresPassword = ref(false)
+const roomPassword = ref<string | null>(null)
+const feedback = ref<string | null>(null)
+
+const router = useRouter()
+
+const checkRoom = async () => {
+  if (!roomId.value) return
+
+  const roomRef = doc(db, 'rooms', roomId.value)
+  const roomSnap = await getDoc(roomRef)
+
+  if (!roomSnap.exists()) {
+    feedback.value = 'Room does not exist.'
+    requiresPassword.value = false
+    return
+  }
+
+  const data = roomSnap.data()
+  requiresPassword.value = !!data.requiresPassword
+  roomPassword.value = data.password || null
+  feedback.value = null
+}
+
+const enterChat = async () => {
+  if (!name.value || !roomId.value) {
+    feedback.value = 'Please enter both your name and a room ID'
+    return
+  }
+
+  const roomRef = doc(db, 'rooms', roomId.value)
+  const roomSnap = await getDoc(roomRef)
+
+  if (!roomSnap.exists()) {
+    feedback.value = 'Room does not exist.'
+    return
+  }
+
+  const data = roomSnap.data()
+
+  if (data.requiresPassword) {
+    requiresPassword.value = true
+    roomPassword.value = data.password
+    if (!password.value) {
+      feedback.value = 'This room requires a password.'
+      return
     }
-  },
-  methods: {
-    async checkRoom() {
-      if (!this.roomId) return
-      const roomRef = doc(db, 'rooms', this.roomId)
-      const roomSnap = await getDoc(roomRef)
+    if (password.value !== roomPassword.value) {
+      feedback.value = 'Incorrect password.'
+      return
+    }
+  }
 
-      if (!roomSnap.exists()) {
-        this.feedback = 'Room does not exist.'
-        this.requiresPassword = false
-        return
-      }
-
-      const data = roomSnap.data()
-      this.requiresPassword = !!data.requiresPassword
-      this.roomPassword = data.password || null
-      this.feedback = null
-    },
-
-    async enterChat() {
-      if (!this.name || !this.roomId) {
-        this.feedback = 'Please enter both your name and a room ID'
-        return
-      }
-
-      const roomRef = doc(db, 'rooms', this.roomId)
-      const roomSnap = await getDoc(roomRef)
-
-      if (!roomSnap.exists()) {
-        this.feedback = 'Room does not exist.'
-        return
-      }
-
-      const data = roomSnap.data()
-
-      if (data.requiresPassword) {
-        this.requiresPassword = true
-        this.roomPassword = data.password
-        if (!this.password) {
-          this.feedback = 'This room requires a password.'
-          return
-        }
-        if (this.password !== this.roomPassword) {
-          this.feedback = 'Incorrect password.'
-          return
-        }
-      }
-
-      this.$router.push({
-        name: 'Chat',
-        params: { roomId: this.roomId, name: this.name },
-      })
-    },
-  },
+  router.push({ name: 'Chat', params: { roomId: roomId.value, name: name.value } })
 }
 </script>
 

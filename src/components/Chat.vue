@@ -21,61 +21,63 @@
   </div>
 </template>
 
-<script>
+<script lang="ts" setup>
+import { ref, onMounted, onUpdated } from 'vue'
 import { db } from '@/firebase/init'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
-import NewMessage from '@/components/NewMessage.vue'
+import { collection, onSnapshot, orderBy, query, DocumentData } from 'firebase/firestore'
 import moment from 'moment'
-export default {
-  name: 'Chat',
-  props: ['name', 'roomId'],
-  components: {
-    NewMessage,
-  },
-  data() {
-    return {
-      messages: [],
-    }
-  },
-  methods: {
-    fetchMessages() {
-      // console.log('Room ID:', this.roomId) // Debugging: Check if roomId is correct
-      if (!this.roomId) {
-        // console.error('Room ID is undefined') // Debugging: Log error if roomId is missing
-        return
-      }
-      const ref = collection(db, `rooms/${this.roomId}/messages`)
-      const messagesQuery = query(ref, orderBy('timestamp'))
-      onSnapshot(messagesQuery, (snapshot) => {
-        //console.log('Snapshot size:', snapshot.size) // Debugging: Check if messages exist
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === 'added') {
-            let doc = change.doc
-            // console.log('New message:', doc.data()) // Debugging: Log message data
-            this.messages.push({
-              id: doc.id,
-              name: doc.data().name,
-              content: doc.data().content,
-              timestamp: moment(doc.data().timestamp).format('lll'),
-            })
-          }
+import NewMessage from '@/components/NewMessage.vue'
+
+// Props
+const props = defineProps<{
+  name: string
+  roomId: string
+}>()
+
+// Refs
+const chatContainer = ref<HTMLElement | null>(null)
+const messages = ref<
+  Array<{
+    id: string
+    name: string
+    content: string
+    timestamp: string
+  }>
+>([])
+
+// Fetch messages from Firestore
+const fetchMessages = () => {
+  if (!props.roomId) return
+
+  const refMsg = collection(db, `rooms/${props.roomId}/messages`)
+  const messagesQuery = query(refMsg, orderBy('timestamp'))
+
+  onSnapshot(messagesQuery, (snapshot) => {
+    snapshot.docChanges().forEach((change) => {
+      if (change.type === 'added') {
+        const doc = change.doc
+        const data = doc.data() as DocumentData
+        messages.value.push({
+          id: doc.id,
+          name: data.name,
+          content: data.content,
+          timestamp: moment(data.timestamp?.toDate?.() || data.timestamp).format('lll'),
         })
-      })
-    },
-    scrollToBottom() {
-      const chatContainer = this.$refs.chatContainer
-      if (chatContainer) {
-        chatContainer.scrollTop = chatContainer.scrollHeight
       }
-    },
-  },
-  created() {
-    this.fetchMessages()
-  },
-  updated() {
-    this.scrollToBottom() // Ensure the chat scrolls to the bottom after DOM updates
-  },
+    })
+  })
 }
+
+// Scroll to bottom
+const scrollToBottom = () => {
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+  }
+}
+
+// Lifecycle hooks
+onMounted(fetchMessages)
+onUpdated(scrollToBottom)
 </script>
 
 <style>

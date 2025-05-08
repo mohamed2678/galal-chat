@@ -14,37 +14,37 @@
   </div>
 </template>
 
-<script>
+<script lang="ts" setup>
+import { ref } from 'vue'
 import { db } from '@/firebase/init'
 import { collection, addDoc } from 'firebase/firestore'
 
-export default {
-  name: 'NewMessage',
-  props: ['name', 'roomId'],
-  data() {
-    return {
-      newMessage: null,
-      feedback: null,
+// Props
+const props = defineProps<{
+  name: string
+  roomId: string
+}>()
+
+// Reactive variables
+const newMessage = ref<string | null>(null)
+const feedback = ref<string | null>(null)
+
+// Send message function
+const addMessage = async () => {
+  if (newMessage.value) {
+    try {
+      await addDoc(collection(db, 'rooms', props.roomId, 'messages'), {
+        content: newMessage.value,
+        name: props.name,
+        timestamp: Date.now(),
+      })
+      newMessage.value = null
+      feedback.value = null
+    } catch (err) {
+      console.error('Error adding message:', err)
     }
-  },
-  methods: {
-    async addMessage() {
-      if (this.newMessage) {
-        try {
-          await addDoc(collection(db, 'rooms', this.roomId, 'messages'), {
-            content: this.newMessage,
-            name: this.name,
-            timestamp: Date.now(),
-          })
-          this.newMessage = null // Clear the input field after sending the message
-          this.feedback = null // Clear the feedback message after sending the message
-        } catch (err) {
-          console.error('Error adding message:', err)
-        }
-      } else {
-        this.feedback = 'You must enter a message in order to send one'
-      }
-    },
-  },
+  } else {
+    feedback.value = 'You must enter a message in order to send one'
+  }
 }
 </script>
